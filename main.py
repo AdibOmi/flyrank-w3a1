@@ -4,11 +4,15 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
+from db import init_db, get_connection
+
 app = FastAPI(
     title="Task API",
     description="A small in-memory to-do list API built for the FlyRank Week 2 CRUD assignment.",
     version="1.0",
 )
+
+init_db()
 
 
 class TaskCreate(BaseModel):
@@ -24,10 +28,15 @@ class TaskUpdate(BaseModel):
 def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
 
+def row_to_dict(row):
+    return {"id": row["id"], 
+            "title": row["title"],
+            "done": bool(row["done"])}
+
 tasks = [
-    {"id": 1, "title": "Buy milk", "done": False},
-    {"id": 2, "title": "Walk the dog", "done": False},
-    {"id": 3, "title": "Read a book", "done": True},
+    {"id": 1, "title": "Attend lecture", "done": False},
+    {"id": 2, "title": "Journal", "done": False},
+    {"id": 3, "title": "Prepare notes", "done": True},
 ]
 
 
@@ -43,15 +52,21 @@ def health():
 
 @app.get("/tasks", summary="List all tasks")
 def list_tasks():
-    return tasks
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM tasks").fetchall()
+    conn.close()
+    return [row_to_dict(row) for row in rows]
+
 
 
 @app.get("/tasks/{task_id}", summary="Get one task by id")
 def get_task(task_id: int):
-    for task in tasks:
-        if task["id"] == task_id:
-            return task
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    conn.close()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    return row_to_dict(row)
 
 
 @app.post("/tasks", status_code=201, summary="Create a new task")
