@@ -5,14 +5,14 @@ SEED_TASKS=[
     ("Train", 0),
     ("Buy groceries", 0),
     ("Finish assignments", 1),
-    #SQLite doesnt have True-False
+    #SQLite doesnt have True-False, so 0 = False and 1 = True
 ]
 
 def get_connection():
     conn = sqlite3.connect(DB_FILE)
     #creates tasks.db
     conn.row_factory=sqlite3.Row
-    #gives rows back as plain tuples
+    #lets us read columns by name, e.g. row["title"]
 
     return conn
 
@@ -23,7 +23,6 @@ def init_db():
         CREATE TABLE IF NOT EXISTS tasks(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
-            -- title is the row index
             done BOOLEAN NOT NULL DEFAULT 0
         )
         """
